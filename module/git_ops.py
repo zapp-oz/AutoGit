@@ -1,6 +1,8 @@
 import os
 import shutil
 import pygit2
+import json
+import requests
 
 def create_commit(repo, username, email):
     #add all files to staging area
@@ -34,40 +36,77 @@ def clone(url, path):
     return clone_repo
 
 #delete all the git repo history
-def delete_history(repo_path, repo, username, email, github_url):
+def delete_history(repo_path, repo, username, email, output_repo_name):
 
-    #delete README.md and LICENSE.txt
-    index = repo.index
+    #delete README.md
+    if(os.path.exists(os.path.join(repo_path, 'README.md'))):
+        os.remove(os.path.join(repo_path, 'README.md'))
+
+    #delete License.txt
+    if(os.path.exists(os.path.join(repo_path, 'LICENSE'))):
+        os.remove(os.path.join(repo_path, 'LICENSE'))
+
+    create_commit(repo, username, email)
+
+    #delete all other branches
+    for b in repo.branches.local:
+        if(b != 'new'):
+            repo.branches.delete(b)
+
+    #rename new branch to main
+    repo.branches['new'].rename('main')
+
+    #delete all remotes
+    n = len(repo.remotes)-1
+    for r in range(0, len(repo.remotes)):
+        repo.remotes.delete(repo.remotes[n].name)
+        n -= 1
+
+    #create a new remote origin
+    repo.remotes.create(
+        'origin', 
+        'https://github.com/' + username + '/' + output_repo_name
+    )
+
+def new_github_repo(username, password, repo_name, github_url):
+    response = requests.post(
+        url = 'https://api.github.com/user/repos', 
+        headers = {
+            'Accept': 'application/vnd.github.v3+json'
+        }, 
+        data = json.dumps({
+            'name': repo_name
+        }), 
+        auth = (username, password)
+    )
     
-    pygit2.Repository.
-    for e in index:
-        if e.path == 'README.md': 
-            index.remove(os.path.join('./', e.path), repo.)
-        # elif e.path == 'LICENSE': 
-        #     index.remove(os.path.join(repo_path, e.path + '.txt'))
-    
-    index.write()
-    for e in index:
-        print(e.path, e.hex)
+    if(response.status_code == 201):
+        return True
+    else:
+        return False
 
-    # create_commit(repo, username, email)
+def push_repo(repo, username, password, github_repo_name):
+    try:
+        repo.remotes['origin'].push(
+            ['refs/heads/main']
+            # ,
+            # pygit2.RemoteCallbacks(
+            #     pygit2.UserPass(
+            #         username, 
+            #         password
+            #     )
+            # )
+        )
 
-    # #delete all other branches
-    # for b in repo.branches.local:
-    #     if(b != 'new'):
-    #         repo.branches.delete(b)
-
-    # #rename new branch to main
-    # repo.branches['new'].rename('main')
-
-    # #delete all remotes
-    # n = len(repo.remotes)-1
-    # for r in range(0, len(repo.remotes)):
-    #     repo.remotes.delete(repo.remotes[n].name)
-    #     n -= 1
-
-    # #create a new remote origin
-    # repo.remotes.create('origin', github_url)
-
-    # index = repo.index
-    # index.read()
+        return True
+    except Exception as e:
+        print(e)
+        requests.delete(
+            url = 'https://api.github.com/repos/' + username + '/' + github_repo_name,
+            headers = {
+            'Accept': 'application/vnd.github.v3+json'
+            },
+            auth = (username, password)
+        )
+        return False
+        
