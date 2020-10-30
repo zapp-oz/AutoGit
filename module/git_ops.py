@@ -4,15 +4,15 @@ import pygit2
 import json
 import requests
 
-def create_commit(repo, username, email):
+def create_commit(repo, username):
     #add all files to staging area
     index = repo.index
     index.add_all()
     index.write()
 
     #create a new tree empty tree object
-    author = pygit2.Signature(username, email)
-    commiter = pygit2.Signature(username, email)
+    author = pygit2.Signature(username + ' Author', username + '@authors.tld')
+    commiter = pygit2.Signature(username + ' Committer', username + '@committers.tld')
     tree = index.write_tree()
 
     #create a new commit in a new branch
@@ -29,14 +29,23 @@ def create_commit(repo, username, email):
     repo.checkout('refs/heads/new')
 
 #clone git repo and initialize submodules
-def clone(url, path):
-    clone_repo = pygit2.clone_repository(url, path)
+def clone(url, path, username, password):
+    clone_repo = pygit2.clone_repository(
+        url, 
+        path, 
+        callbacks = pygit2.RemoteCallbacks(
+                pygit2.UserPass(
+                    username, 
+                    password
+                )
+            )
+    )
     clone_repo.init_submodules()
     clone_repo.update_submodules()
     return clone_repo
 
 #delete all the git repo history
-def delete_history(repo_path, repo, username, email, output_repo_name):
+def delete_history(repo_path, repo, username, output_repo_name):
 
     #delete README.md
     if(os.path.exists(os.path.join(repo_path, 'README.md'))):
@@ -46,7 +55,7 @@ def delete_history(repo_path, repo, username, email, output_repo_name):
     if(os.path.exists(os.path.join(repo_path, 'LICENSE'))):
         os.remove(os.path.join(repo_path, 'LICENSE'))
 
-    create_commit(repo, username, email)
+    create_commit(repo, username)
 
     #delete all other branches
     for b in repo.branches.local:
@@ -68,7 +77,7 @@ def delete_history(repo_path, repo, username, email, output_repo_name):
         'https://github.com/' + username + '/' + output_repo_name
     )
 
-def new_github_repo(username, password, repo_name, github_url):
+def new_github_repo(username, password, repo_name):
     response = requests.post(
         url = 'https://api.github.com/user/repos', 
         headers = {
@@ -88,19 +97,17 @@ def new_github_repo(username, password, repo_name, github_url):
 def push_repo(repo, username, password, github_repo_name):
     try:
         repo.remotes['origin'].push(
-            ['refs/heads/main']
-            # ,
-            # pygit2.RemoteCallbacks(
-            #     pygit2.UserPass(
-            #         username, 
-            #         password
-            #     )
-            # )
+            ['refs/heads/main'],
+            pygit2.RemoteCallbacks(
+                pygit2.UserPass(
+                    username, 
+                    password
+                )
+            )
         )
 
         return True
     except Exception as e:
-        print(e)
         requests.delete(
             url = 'https://api.github.com/repos/' + username + '/' + github_repo_name,
             headers = {

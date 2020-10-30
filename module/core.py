@@ -2,6 +2,7 @@ import git_ops
 import os
 import argparse
 import sys
+import shutil
 
 def getargs():
     #initialize the parser
@@ -24,13 +25,12 @@ def main():
 
     cwd = os.getcwd()
     repo_path = os.path.join(cwd, '../' + args.output_repo_name)#fix this
-    repo = git_ops.clone(args.input_repo, repo_path)
+    repo = git_ops.clone(args.input_repo, repo_path, args.username, args.password)
 
     git_ops.delete_history(
         repo_path,
         repo, 
-        args.username, 
-        args.username, #change this
+        args.username,
         args.output_repo_name
     )
 
@@ -41,6 +41,7 @@ def main():
     )
 
     if not status:
+        shutil.rmtree(repo_path)
         sys.exit('Error creating github repo')
 
     status = git_ops.push_repo(
@@ -51,6 +52,7 @@ def main():
     )
 
     if not status:
+        shutil.rmtree(repo_path)
         sys.exit('Error pushing the code to gihub')
 
 if __name__ == "__main__":
