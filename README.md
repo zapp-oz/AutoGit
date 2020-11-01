@@ -5,7 +5,7 @@ One can provide their username, password, new-output-repo name and input-repo ur
 
 ## Installation
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install reinit.
 
 ```bash
 pip install reinit
