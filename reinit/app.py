@@ -33,7 +33,7 @@ def main():
     local_repo_path = getdir()
 
     #setting up local repo for the repo to be cloned
-    local_git_repo = git_ops.Git_Ops(
+    local_git_repo = git_ops.GitOps(
         args.username,
         args.password,
         local_repo_path,
@@ -54,12 +54,12 @@ def main():
 
 
     #pushing reset repo to github
-    remote_github_repo = git_ops.Github_Ops(args.username, args.password)
+    remote_github_repo = git_ops.GithubOps(args.username, args.password)
 
     status = remote_github_repo.new_github_repo(args.output_repo_name)
 
     if not status:
-        shutil.rmtree(repo_path)
+        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
         sys.exit('Error creating github repo')
 
     status = local_git_repo.push_repo(
@@ -69,8 +69,8 @@ def main():
 
     if not status:
         remote_github_repo.delete_github_repo(args.output_repo_name)
-        shutil.rmtree(repo_path)
+        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
         sys.exit('Error pushing the code to gihub')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

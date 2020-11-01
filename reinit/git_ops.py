@@ -3,7 +3,7 @@ import pygit2
 import json
 import requests
 
-class Github_Ops:
+class GithubOps:
 
     def __init__(self, username, password):
         
@@ -45,7 +45,7 @@ class Github_Ops:
     
 
 
-class Git_Ops:
+class GitOps:
 
     def __init__(self, username, password, local_repo_path, local_repo_name):
         self._username = username
@@ -111,17 +111,29 @@ class Git_Ops:
         repo.checkout(ref)
 
     def set_new_remote(self, remote_name, remote_url):
+
+        #get the local git repo
+        repo = pygit2.Repository(
+            os.path.join(self._local_repo_path, self._local_repo_name)
+        )
+
         try:
             repo.remotes.create(
                 remote_name, 
                 remote_url
             )
             return True
-            
+
         except Exception:
             return False
 
     def push_repo(self, ref, remote_name):
+
+        #get the local git repo
+        repo = pygit2.Repository(
+            os.path.join(self._local_repo_path, self._local_repo_name)
+        )
+
         try:
             repo.remotes[remote_name].push(
                 [ref],
