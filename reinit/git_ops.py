@@ -55,21 +55,24 @@ class GitOps:
 
     #clone git repo and initialize submodules
     def clone(self, github_repo_url):
-
-        cloned_repo = pygit2.clone_repository(
-            github_repo_url, 
-            os.path.join(self._local_repo_path, self._local_repo_name),
-            callbacks = pygit2.RemoteCallbacks(
-                    pygit2.UserPass(
-                        self._username, 
-                        self._password
+        try:
+            cloned_repo = pygit2.clone_repository(
+                github_repo_url, 
+                os.path.join(self._local_repo_path, self._local_repo_name),
+                callbacks = pygit2.RemoteCallbacks(
+                        pygit2.UserPass(
+                            self._username, 
+                            self._password
+                        )
                     )
-                )
-        )
+            )
 
-        cloned_repo.init_submodules()
-
-        cloned_repo.update_submodules()
+            cloned_repo.init_submodules()
+            cloned_repo.update_submodules()
+            
+            return cloned_repo
+        except Exception:
+            return None
 
 
     def create_commit(self, ref, commit_message):
@@ -97,18 +100,23 @@ class GitOps:
         
         tree = index.write_tree()
 
-        #create a new commit in a new branch
-        repo.create_commit(
-            ref,
-            author,
-            committer,
-            commit_message,
-            tree,
-            []
-        )
+        try:
+            #create a new commit in a new branch
+            commit = repo.create_commit(
+                ref,
+                author,
+                committer,
+                commit_message,
+                tree,
+                []
+            )
+        except Exception:
+            return False
 
         #change the HEAD to new branch
         repo.checkout(ref)
+
+        return commit
 
     def set_new_remote(self, remote_name, remote_url):
 
@@ -170,16 +178,21 @@ class GitOps:
 
         self.create_commit('refs/heads/new', 'Init Commit')
 
-        #delete all other branches
-        for b in repo.branches.local:
-            if(b != 'new'):
-                repo.branches.delete(b)
+        try:
+            #delete all other branches
+            for b in repo.branches.local:
+                if(b != 'new'):
+                    repo.branches.delete(b)
 
-        #rename new branch to main
-        repo.branches['new'].rename('main')
+            #rename new branch to main
+            repo.branches['new'].rename('main')
 
-        #delete all remotes
-        n = len(repo.remotes)-1
-        for r in range(0, len(repo.remotes)):
-            repo.remotes.delete(repo.remotes[n].name)
-            n -= 1
+            #delete all remotes
+            n = len(repo.remotes)-1
+            for r in range(0, len(repo.remotes)):
+                repo.remotes.delete(repo.remotes[n].name)
+                n -= 1
+
+            return True
+        except Exception:
+            return False

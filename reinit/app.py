@@ -1,7 +1,11 @@
-import git_ops
 import os
-import argparse
 import sys
+
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'reinit')))
+
+import argparse
+import git_ops
 import shutil
 from tkinter import filedialog
 
@@ -40,9 +44,18 @@ def main():
         args.output_repo_name
     )
 
-    local_git_repo.clone(args.input_repo)
+    status = local_git_repo.clone(args.input_repo)
 
-    local_git_repo.reset_git()
+    if not status:
+        if os.path.isdir(os.path.join(local_repo_path, args.output_repo_name)):
+            shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        sys.exit('Error cloning the repo')
+
+    status = local_git_repo.reset_git()
+
+    if not status:
+        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        sys.exit('Error re-initializing the repo')
 
     status = local_git_repo.set_new_remote(
         'origin',
