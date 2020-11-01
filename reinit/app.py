@@ -8,6 +8,7 @@ import argparse
 import git_ops
 import shutil
 from tkinter import filedialog
+from tkinter import Tk
 
 def getargs():
     #initialize the parser
@@ -33,6 +34,7 @@ def getdir():
     return input_dir
 
 def main():
+    Tk().withdraw()
     args = getargs()
     local_repo_path = getdir()
 
@@ -46,15 +48,19 @@ def main():
 
     status = local_git_repo.clone(args.input_repo)
 
+    local_repo_path = os.path.join(local_repo_path, args.output_repo_name)
+
     if not status:
-        if os.path.isdir(os.path.join(local_repo_path, args.output_repo_name)):
-            shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
-        sys.exit('Error cloning the repo')
+        if os.path.isdir(local_repo_path):
+            if len(os.listdir(local_repo_path)) == 0:
+                shutil.rmtree(local_repo_path)
+                sys.exit('Error cloning the repo')
+        sys.exit('Repo already exists')
 
     status = local_git_repo.reset_git()
 
     if not status:
-        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        shutil.rmtree(local_repo_path)
         sys.exit('Error re-initializing the repo')
 
     status = local_git_repo.set_new_remote(
@@ -63,7 +69,7 @@ def main():
     )
 
     if not status:
-        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        shutil.rmtree(local_repo_path)
 
 
     #pushing reset repo to github
@@ -72,7 +78,7 @@ def main():
     status = remote_github_repo.new_github_repo(args.output_repo_name)
 
     if not status:
-        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        shutil.rmtree(local_repo_path)
         sys.exit('Error creating github repo')
 
     status = local_git_repo.push_repo(
@@ -82,7 +88,7 @@ def main():
 
     if not status:
         remote_github_repo.delete_github_repo(args.output_repo_name)
-        shutil.rmtree(os.path.join(local_repo_path, args.output_repo_name))
+        shutil.rmtree(local_repo_path)
         sys.exit('Error pushing the code to gihub')
 
 if __name__ == '__main__':
